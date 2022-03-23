@@ -1,2 +1,2 @@
-# BC-Ag-Nematode-qPCR
-All programs and scripts related to the BC-Ag Nematode-qPCR project. 
+#nematode_qpcr_project
+Scripts related to development of qPCR assays
