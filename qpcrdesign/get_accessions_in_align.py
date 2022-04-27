@@ -11,12 +11,12 @@ def parse_args():
     )
     parser.add_argument('-o', 
         dest='output_path', 
-        type=pathlib.path, 
+        type=pathlib.Path, 
         default=None,
         help='Output path'
     )
     args = parser.parse_args()
-    output_path = args.alignment_path.parents
+    output_path = pathlib.Path(args.alignment_path.parents)
     if args.output_path: 
         output_path = args.output_path
     return (args.alignment_path, output_path)
@@ -31,7 +31,7 @@ def main():
         list_id.append(seq.id.split('.')[0])
 
     #Output
-    output_file = open(output_path.joinpath('list_accessions.txt', 'w'))
+    output_file = open(output_path.joinpath('list_accessions.txt'), 'w')
     for id in list_id: 
         output_file.write(f'{id}\n')
     output_file.close()
