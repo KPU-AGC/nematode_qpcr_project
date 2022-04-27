@@ -16,7 +16,7 @@ def parse_args():
         help='Output path'
     )
     args = parser.parse_args()
-    output_path = pathlib.Path(args.alignment_path.parents)
+    output_path = args.alignment_path.parent
     if args.output_path: 
         output_path = args.output_path
     return (args.alignment_path, output_path)
