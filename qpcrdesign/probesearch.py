@@ -63,7 +63,7 @@ class probe:
         self.specificity = (blastdb_len - len(blast_match_accessions))/(blastdb_len - len(target_accessions))
 
     def calculate_score(self): 
-        self.score = self.sensitivity + self.score
+        self.score = self.sensitivity + self.specificity
 
 class probeGenerator: 
     def __init__(
