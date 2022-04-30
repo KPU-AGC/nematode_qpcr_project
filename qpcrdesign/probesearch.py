@@ -189,7 +189,7 @@ class probeGenerator:
         max_length, 
         ):
         #Note that the coordinates are 1-based, so the template start has to be -1
-        self.template = template[start-1:end]
+        self.template = template[start:end]
         self.start = start
         self.end = end
         self.min_length = min_length
@@ -249,7 +249,7 @@ class probeGenerator:
                 probe_seq = self.template[i:i+probe_len]
                 if check_probe(probe_seq) is True: 
                     #Note that the coordinates are converted back to 1-based
-                    self.probes.append(probe(self.start+i, probe_seq))
+                    self.probes.append(probe(self.start+i+1, probe_seq))
     def output(self, path): 
         probe_data = []
         for probe in self.probes: 
@@ -419,7 +419,7 @@ def parse_args():
     args = parser.parse_args()
     #Argument order: target sequence, target start coordinate, target end coordinate, minimum primer length, max primer length, check flag, blastdb, target accession path
     #Note that coordinates are converted to 0-based half-open coordinates
-    return (args.target_alignment, args.target_start-1, args.target_end, args.min_primer_len, args.max_primer_len, args.sens_spec_flag, args.blastdb, args.blastdb_len, args.target_accessions)
+    return (args.target_alignment_path, args.target_start-1, args.target_end, args.min_primer_len, args.max_primer_len, args.sens_spec_flag, args.blastdb, args.blastdb_len, args.target_accessions)
 
 def main():
     #Arguments
