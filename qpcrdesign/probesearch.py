@@ -1,4 +1,4 @@
-from Bio import SeqIO, Seq
+from Bio import SeqIO, Seq, AlignIO
 import pathlib
 import argparse
 import tempfile
@@ -6,6 +6,120 @@ import io
 import subprocess
 import pandas
 import csv
+
+class alignment:
+    def __init__(self, alignment_path): 
+        self.alignment = AlignIO.read(alignment_path, 'fasta')
+    def get_consensus(self): 
+        """
+        Determine the consensus sequence of an alignment, and create position matrix
+        Definition of consensus: most common base represented at that position. 
+        Consensus sequence is a string object.
+        """
+        def get_seq_position_info(alignment): 
+            """
+            Get information for each position of the alignment.
+            Output is in list format, with each index corresponding to the 0-based position
+            of the alignment. 
+            Each index contains dictionary with following information: 
+            pos - position number
+            accessions - the accessions represented at that position
+            bases - base calls in corresponding order of accessions
+            seqs_rep - number of accessions represented at that position
+            p_seq_rep - percentage of accessions represented at that position
+            """
+            def get_sequence_regions(alignment): 
+                """
+                Identify the regions that each accession spans on the alignment.
+                Algorithm: 
+                1) From beginning of sequence, keep going until position is not '-',
+                then record the position as the start of the region
+                2) From the end of the sequence, go in reverse until position is not '-',
+                then record the position as the end of the region
+                3) Return tuple --> (accession, start, end)
+                """
+                def get_sequence_region(accession): 
+                    #Variables
+                    f_start = False
+                    f_end = False
+                    start = 0
+                    end = 0
+                    #Data from SeqRecord object 
+                    sequence = accession.seq
+                    acc = (accession.id).split('.')[0]
+                    #From beginning of the sequence, keep going until position is not '-'
+                    i = 0
+                    while (f_start is False): 
+                        if sequence[i] != '-': 
+                            start = i
+                            f_start = True
+                        i = i + 1
+                    #From ending of the sequence, keep going until position is not '-'
+                    i = -1
+                    while (f_end is False): 
+                        if sequence[i] != '-':
+                            end = i%len(sequence) #Translate negative index to positive index
+                            f_end = True
+                        i = i - 1
+                    return ((acc, start, end))
+                sequence_regions = []
+                for accession in alignment: 
+                    sequence_regions.append(get_sequence_region(accession))
+                return sequence_regions
+            def get_contributing_seqs(position, list_seq_region):
+                """
+                Given a position and the list of sequence regions for each accession,
+                identify which accessions are represented
+                """
+                list_accession = []
+                list_indices = []
+                for sequence in list_seq_region:
+                    if (position >= sequence[1]) and (position <= sequence[2]): 
+                        list_accession.append(sequence[0])
+                        list_indices.append(list_seq_region.index(sequence))
+                return list_accession, list_indices
+            list_seq_position_info = []
+            #Get sequence regions
+            list_seq_regions = get_sequence_regions(alignment)
+            num_accessions = len(alignment)
+            for position in range(alignment.get_alignment_length()):
+                list_accessions, list_indices = get_contributing_seqs(position, list_seq_regions)
+                list_bases = []
+                #Append the basecalls of every contributing sequence at specified position
+                for index in list_indices: 
+                    list_bases.append(alignment[index].seq[position])
+                position_info = {
+                    'pos':position,
+                    'accessions':tuple(list_accessions),
+                    'bases':tuple(list_bases),
+                    'seqs_rep':len(list_accessions),
+                    'p_seq_rep':len(list_accessions)/num_accessions,
+                }
+                list_seq_position_info.append(position_info)
+            return list_seq_position_info
+        consensus_sequence = []
+        #Get seq_info
+        seq_info = get_seq_position_info(self.alignment)
+        for position in seq_info: 
+            #Ignore any ambiguous basecalls - accept A, T, C, G, and 'gap'
+            base_counts = {
+                'a':position['bases'].count('a')+position['bases'].count('A'),
+                't':position['bases'].count('t')+position['bases'].count('T'),
+                'c':position['bases'].count('c')+position['bases'].count('C'),
+                'g':position['bases'].count('g')+position['bases'].count('G'),
+                '-':position['bases'].count('-'),
+            }
+            max_basecalls = [key for key, count in base_counts.items() if count == max(base_counts.values())]
+            if len(max_basecalls) == 1: 
+                consensus_sequence.append(max_basecalls[0])
+            else: 
+                consensus_sequence.append('n')
+        return str(Seq.Seq(''.join(consensus_sequence)).ungap(gap='-'))
+    def get_accessions(self): 
+        list_id = []
+        for seq in self.alignment: 
+            list_id.append(seq.id.split('.')[0])
+        return list_id
 
 class probe:
     def __init__(self, root_pos, seq):
@@ -68,14 +182,14 @@ class probe:
 class probeGenerator: 
     def __init__(
         self, 
-        template_seq_path, 
+        template, 
         start, 
         end, 
         min_length, 
         max_length, 
         ):
-        template_seq_file = SeqIO.read(template_seq_path, 'fasta')
-        self.template = template_seq_file.seq[start:end]
+        #Note that the coordinates are 1-based, so the template start has to be -1
+        self.template = template[start-1:end]
         self.start = start
         self.end = end
         self.min_length = min_length
@@ -135,7 +249,7 @@ class probeGenerator:
                 probe_seq = self.template[i:i+probe_len]
                 if check_probe(probe_seq) is True: 
                     #Note that the coordinates are converted back to 1-based
-                    self.probes.append(probe(self.start+i+1, probe_seq))
+                    self.probes.append(probe(self.start+i, probe_seq))
     def output(self, path): 
         probe_data = []
         for probe in self.probes: 
@@ -240,19 +354,23 @@ def get_target_accessions(path):
 
 def parse_args(): 
     parser = argparse.ArgumentParser(description='probesearch.py - identify viable probes in an alignment for given target sequences')
-    parser.add_argument('target_seq', 
+    parser.add_argument('target_alignment_path', 
         action='store', 
         type=pathlib.Path,
-        help = 'Path to target sequence file, fasta format'
+        help = 'Path to target alignment file, fasta format'
     )
-    parser.add_argument('target_start',
+    parser.add_argument('--target_start',
         metavar='target_start', 
+        dest='target_start',
+        default=1,
         action='store',
         type=int,
         help='Start coordinate of target region, 1-based coordinates'
     )
-    parser.add_argument('target_end',
+    parser.add_argument('--target_end',
         metavar='target_end', 
+        dest='target_end', 
+        default=None,
         action='store',
         type=int,
         help='End coordinate of target region, 1-based coordinates'
@@ -301,16 +419,22 @@ def parse_args():
     args = parser.parse_args()
     #Argument order: target sequence, target start coordinate, target end coordinate, minimum primer length, max primer length, check flag, blastdb, target accession path
     #Note that coordinates are converted to 0-based half-open coordinates
-    return (args.target_seq, args.target_start-1, args.target_end, args.min_primer_len, args.max_primer_len, args.sens_spec_flag, args.blastdb, args.blastdb_len, args.target_accessions)
+    return (args.target_alignment, args.target_start-1, args.target_end, args.min_primer_len, args.max_primer_len, args.sens_spec_flag, args.blastdb, args.blastdb_len, args.target_accessions)
 
 def main():
     #Arguments
-    target_seq_path, target_start, target_end, min_primer_len, max_primer_len, check_flag, blastdb, blastdb_len, target_accession_path = parse_args()
-    pb_gen = probeGenerator(target_seq_path, target_start, target_end, min_primer_len, max_primer_len)
+    target_alignment_path, target_start, target_end, min_primer_len, max_primer_len, check_flag, blastdb, blastdb_len, target_accession_path = parse_args()
+    #Process the alignment
+    target_alignment = alignment(target_alignment_path)
+    target_consensus = target_alignment.get_consensus()
+    target_accessions = target_alignment.get_accessions()
+    #Generate Probes
+    pb_gen = probeGenerator(target_consensus, target_start, target_end, min_primer_len, max_primer_len)
     pb_gen.get_probes()
+    #Do the specificity check
     if check_flag is False: 
         #Read target accessions
-        target_accessions = get_target_accessions(target_accession_path)
+        #target_accessions = get_target_accessions(target_accession_path)
         #Generate BLAST results
         pb_blast = nemaBlast(blastdb, blastdb_len)
         blast_results = pb_blast.blast_all(pb_gen.probes)
@@ -319,11 +443,11 @@ def main():
             probe.calculate_specificity(blast_results[probe.id], target_accessions, blastdb_len)
             probe.calculate_score()
         #Output BLAST results
-        pb_blast.output(blast_results, target_seq_path)
+        pb_blast.output(blast_results, target_alignment_path)
         #Output probe list
-        pb_gen.output(target_seq_path)
+        pb_gen.output(target_alignment_path)
     else: 
-        pb_gen.output(target_seq_path)
+        pb_gen.output(target_alignment_path)
 
 if __name__ == '__main__': 
     main()
