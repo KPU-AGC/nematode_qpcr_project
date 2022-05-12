@@ -333,6 +333,17 @@ class nemaBlast:
             print(f"{str(probes.index(probe))} out of {str(len(probes))} completed..")
         return blast_results
 
+    def blast_all_proper(self, probes): 
+        #Generate the probe temporary file
+        fasta = tempfile.NamedTemporaryFile(delete=True)
+        for probe in probes:
+            fasta.write(f">{str(probe.id)}\n{str(probe.seq)}\n".encode())
+        fasta.seek(0)
+        #Run the BLAST job
+        #Split the dater into several BLAST results
+
+        pass
+
     def output(self, blast_results, path): 
         #Make path to store all of the blast results
         blast_folder_path = path.with_name('probe_blast')
