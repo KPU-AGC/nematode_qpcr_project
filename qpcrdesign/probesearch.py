@@ -1,4 +1,5 @@
 from Bio import SeqIO, Seq, AlignIO
+import multiprocessing
 import pathlib
 import argparse
 import tempfile
@@ -341,6 +342,8 @@ class nemaBlast:
         for probe in probes:
             fasta.write(f">{str(probe.id)}\n{str(probe.seq)}\n".encode())
         fasta.seek(0)
+        cpu_count = multiprocessing.cpu_count() - 2
+        print(f"NUMBER OF THREADS: {str(cpu_count)}")
         #Run the BLAST job
         args = [
             "blastn",
@@ -354,6 +357,10 @@ class nemaBlast:
             "10 qacc sacc ssciname pident qlen length mismatch gapopen qstart qend sstart send evalue bitscore",
             "-query",
             fasta.name,
+            "-num_threads",
+            str(cpu_count),
+            "-mt_mode",
+            str(1)
         ]
         result = subprocess.run(args, capture_output=True)
         decoded = result.stdout.decode('utf-8')
