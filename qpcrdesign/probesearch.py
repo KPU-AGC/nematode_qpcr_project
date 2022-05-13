@@ -388,7 +388,7 @@ class nemaBlast:
         list_probe_ids = set(self.data['qacc'])
         blast_results = dict()
         for probe_id in list_probe_ids: 
-            blast_results[probe_id]=self.data.loc[self.data['qacc']==probe_id]
+            blast_results[str(probe_id)]=self.data.loc[self.data['qacc']==probe_id]
         return blast_results
 
     def output(self, blast_results, path): 
@@ -525,12 +525,12 @@ def main():
         #Generate BLAST results
         pb_blast = nemaBlast(blastdb, blastdb_len)
         blast_results = pb_blast.blast_all_proper(pb_gen.probes)
+        #Output BLAST results
+        pb_blast.output(blast_results, output_path)
         for probe in pb_gen.probes: 
             probe.calculate_sensitivity(blast_results[probe.id], target_accessions)
             probe.calculate_specificity(blast_results[probe.id], target_accessions, blastdb_len)
             probe.calculate_score()
-        #Output BLAST results
-        pb_blast.output(blast_results, output_path)
         #Output probe list
         pb_gen.output(output_path)
     else: 
