@@ -6,6 +6,7 @@ import io
 import subprocess
 import pandas
 import csv
+import time
 
 class alignment:
     def __init__(self, alignment_path): 
@@ -402,6 +403,11 @@ def get_target_accessions(path):
     input_file.close()
     return target_accessions
 
+def print_runtime(action) -> None:
+
+    """ Print the time and some defined action. """
+    print(f'[{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}] {action}')
+
 def parse_args(): 
     parser = argparse.ArgumentParser(description='probesearch.py - identify viable probes in an alignment for given target sequences')
     parser.add_argument(
@@ -500,8 +506,11 @@ def main():
     target_consensus = target_alignment.get_consensus()
     target_accessions = target_alignment.get_accessions()
     #Generate Probes
+    print_runtime("Start")
     pb_gen = probeGenerator(target_consensus, target_start, target_end, min_primer_len, max_primer_len)
+    print("Generating probes...")
     pb_gen.get_probes()
+    print("Probes finished!")
     #Do the specificity check
     if check_flag is False: 
         #Read target accessions
@@ -519,6 +528,6 @@ def main():
         pb_gen.output(output_path)
     else: 
         pb_gen.output(output_path)
-
+    print_runtime("End")
 if __name__ == '__main__': 
     main()
