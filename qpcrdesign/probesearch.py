@@ -283,6 +283,7 @@ class nemaBlast:
     def __init__(self, blastdb, blastdb_len):
         self.blastdb = blastdb
         self.blastdb_len = blastdb_len
+        self.data = None
     
     def blast_all(self, probes):
         def blast(seq, blastdb, blastdb_len): 
@@ -340,9 +341,47 @@ class nemaBlast:
             fasta.write(f">{str(probe.id)}\n{str(probe.seq)}\n".encode())
         fasta.seek(0)
         #Run the BLAST job
-        #Split the dater into several BLAST results
-
-        pass
+        args = [
+            "blastn",
+            "-task",
+            "blastn-short",
+            "-db",
+            self.blastdb,
+            "-num_alignments",
+            str(self.blastdb_len),
+            "-outfmt",
+            "10 qacc sacc ssciname pident qlen length mismatch gapopen qstart qend sstart send evalue bitscore",
+            "-query",
+            fasta.name,
+        ]
+        result = subprocess.run(args, capture_output=True)
+        decoded = result.stdout.decode('utf-8')
+        output = io.StringIO(decoded)
+        #Output formatting into dataframe
+        headers=[
+            'qacc',
+            'sacc',
+            'ssciname',
+            'pident',
+            'qlen',
+            'length',
+            'mismatch', 
+            'gapopen', 
+            'qstart', 
+            'qend', 
+            'sstart', 
+            'send', 
+            'evalue', 
+            'bitscore',
+        ]
+        self.data = pandas.read_csv(output, sep=',', header=None, names=headers)
+        fasta.close()
+        #Split the data
+        list_probe_ids = set(self.data['qacc'])
+        blast_results = dict()
+        for probe_id in list_probe_ids: 
+            blast_results[probe_id]=self.data.loc[self.data['qacc']==probe_id]
+        return blast_results
 
     def output(self, blast_results, path): 
         #Make path to store all of the blast results
@@ -448,7 +487,7 @@ def main():
         #target_accessions = get_target_accessions(target_accession_path)
         #Generate BLAST results
         pb_blast = nemaBlast(blastdb, blastdb_len)
-        blast_results = pb_blast.blast_all(pb_gen.probes)
+        blast_results = pb_blast.blast_all_proper(pb_gen.probes)
         for probe in pb_gen.probes: 
             probe.calculate_sensitivity(blast_results[probe.id], target_accessions)
             probe.calculate_specificity(blast_results[probe.id], target_accessions, blastdb_len)
