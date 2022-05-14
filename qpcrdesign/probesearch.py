@@ -339,8 +339,10 @@ class nemaBlast:
     def blast_all_proper(self, probes): 
         #Generate the probe temporary file
         fasta = tempfile.NamedTemporaryFile(delete=True)
+        print('Probes in the temp file: ')
         for probe in probes:
             fasta.write(f">{str(probe.id)}\n{str(probe.seq)}\n".encode())
+            print(probe.id)
         fasta.seek(0)
         cpu_count = multiprocessing.cpu_count() - 2
         print(f"NUMBER OF THREADS: {str(cpu_count)}")
