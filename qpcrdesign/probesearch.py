@@ -385,10 +385,11 @@ class nemaBlast:
             'bitscore',
         ]
         self.data = pandas.read_csv(output, sep=',', header=None, names=headers)
+        self.data.loc[self.data['qacc']=='1663-17']
         fasta.close()
         #Split the data
         list_probe_ids = set(self.data['qacc'])
-        print(list_probe_ids)
+        print(f"qacc set:\n{list_probe_ids}")
         blast_results = dict()
         for probe_id in list_probe_ids: 
             blast_results[str(probe_id)]=self.data.loc[self.data['qacc']==probe_id]
