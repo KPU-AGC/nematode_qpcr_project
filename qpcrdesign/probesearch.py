@@ -517,6 +517,8 @@ def main():
     print("Generating probes...")
     pb_gen.get_probes()
     print("Probes finished!")
+    for probe in pb_gen.probes: 
+        print(probe)
     #Do the specificity check
     if check_flag is False: 
         #Read target accessions
