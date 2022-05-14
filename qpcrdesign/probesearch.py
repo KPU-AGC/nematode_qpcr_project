@@ -239,6 +239,8 @@ class probeGenerator:
                 and last5_flag is False
                 and seq[0] != 'G'
                 and seq[0] != 'g'
+                and not('n' in seq)
+                and not('N' in seq)
             ):
                 return True
             else: 
