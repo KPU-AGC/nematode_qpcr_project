@@ -343,6 +343,7 @@ class nemaBlast:
         for probe in probes:
             fasta.write(f">{str(probe.id)}\n{str(probe.seq)}\n".encode())
             print(probe.id)
+            print(probe.seq)
         fasta.seek(0)
         cpu_count = multiprocessing.cpu_count() - 2
         print(f"NUMBER OF THREADS: {str(cpu_count)}")
