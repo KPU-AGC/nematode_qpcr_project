@@ -425,7 +425,6 @@ def parse_args():
     )
     parser.add_argument(
         '--output', 
-        '-output',
         metavar='output_directory',
         dest='output_path',
         default=None,
@@ -499,8 +498,8 @@ def parse_args():
         help = 'Path to target_accessions'
     )
     args = parser.parse_args()
-    if args.output_path is None: 
-        args.output_path = pathlib.Path(args.target_alignment_path.parent)
+    if not args.output_path:
+        args.output_path = args.target_alignment_path.parent
     #Argument order: target sequence, target start coordinate, target end coordinate, minimum primer length, max primer length, check flag, blastdb, target accession path
     #Note that coordinates are converted to 0-based half-open coordinates
     return (args.target_alignment_path, args.output_path, args.target_start-1, args.target_end, args.min_primer_len, args.max_primer_len, args.sens_spec_flag, args.blastdb, args.blastdb_len, args.target_accessions)
